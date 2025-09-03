@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}{% if form.instance.pk %}Редагувати резюме{% else %}Створити резюме{% endif %}{% endblock %}
+{% block content %}
+<div class="form-container my-5">
+    <h2>{% if form.instance.pk %}Редагувати резюме{% else %}Створити нове резюме{% endif %}</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ form.title.label_tag }}
+            {{ form.title }}
+            {{ form.title.errors }}
+        </div>
+        <div class="mb-3">
+            {{ form.template.label_tag }}
+            {{ form.template }}
+            {{ form.template.errors }}
+        </div>
+        <div class="mb-3">
+            {{ form.photo.label_tag }}
+            {{ form.photo }}
+            {{ form.photo.errors }}
+            {% if form.instance.photo %}
+                <p>Поточне фото: <img src="{{ form.instance.photo.url }}" alt="Photo" style="max-width: 100px;"></p>
+            {% endif %}
+        </div>
+        <h3>Секції резюме</h3>
+        {{ section_formset.management_form }}
+        {% for form in section_formset %}
+            <div class="section-formset mb-3 border p-3">
+                {% if form.instance.pk %}
+                    <div class="form-check">
+                        {{ form.DELETE }}
+                        <label class="form-check-label">Видалити цю секцію</label>
+                    </div>
+                {% endif %}
+                <div class="mb-3">
+                    {{ form.section_type.label_tag }}
+                    {{ form.section_type }}
+                    {{ form.section_type.errors }}
+                </div>
+                <div class="mb-3">
+                    {{ form.content.label_tag }}
+                    {{ form.content }}
+                    {{ form.content.errors }}
+                </div>
+                <div class="mb-3">
+                    {{ form.order.label_tag }}
+                    {{ form.order }}
+                    {{ form.order.errors }}
+                </div>
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+    </form>
+</div>
+{% endblock %}

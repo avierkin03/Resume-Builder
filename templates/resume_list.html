@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Мої резюме{% endblock %}
+{% block content %}
+<div class="my-5">
+    <h2>Мої резюме</h2>
+    <a href="{% url 'resume_create' %}" class="btn btn-primary mb-3">Створити нове резюме</a>
+    {% if resumes %}
+        <div class="row">
+            {% for resume in resumes %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ resume.title }}</h5>
+                            <p class="card-text">Оновлено: {{ resume.updated_at|date:"d.m.Y" }}</p>
+                            <a href="{% url 'resume_preview' resume.pk %}" class="btn btn-outline-primary">Переглянути</a>
+                            <a href="{% url 'resume_edit' resume.pk %}" class="btn btn-outline-secondary">Редагувати</a>
+                            <a href="{% url 'resume_clone' resume.pk %}" class="btn btn-outline-info">Клонувати</a>
+                            <a href="{% url 'resume_delete' resume.pk %}" class="btn btn-outline-danger">Видалити</a>
+                            <div class="mt-2">
+                                <a href="{% url 'export_pdf' resume.pk %}" class="btn btn-outline-dark">PDF</a>
+                                <a href="{% url 'export_docx' resume.pk %}" class="btn btn-outline-dark">DOCX</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>У вас поки немає резюме.</p>
+    {% endif %}
+</div>
+{% endblock %}

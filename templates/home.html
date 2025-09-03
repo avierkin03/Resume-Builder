@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Головна - Resume Builder{% endblock %}
+{% block content %}
+<div class="text-center my-5">
+    <h1>Ласкаво просимо до Resume Builder!</h1>
+    <p>Створюйте професійні резюме швидко та легко. Вибирайте шаблони, додавайте дані та експортуйте у PDF або DOCX.</p>
+    {% if not user.is_authenticated %}
+        <a href="{% url 'register' %}" class="btn btn-primary me-2">Зареєструватися</a>
+        <a href="{% url 'login' %}" class="btn btn-outline-primary">Увійти</a>
+    {% endif %}
+</div>
+
+<h2 class="my-4">Популярні шаблони</h2>
+<div id="templateCarousel" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-inner">
+        {% for template in templates %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ template.name }}</h5>
+                        <p class="card-text">{{ template.description|truncatewords:20 }}</p>
+                        <a href="{% url 'templates' %}" class="btn btn-outline-secondary">Переглянути</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p>Шаблони поки недоступні.</p>
+        {% endfor %}
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#templateCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Попередній</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#templateCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Наступний</span>
+    </button>
+</div>
+
+<h2 class="my-4">Останні оголошення</h2>
+{% for announcement in announcements %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">{{ announcement.title }}</h5>
+            <p class="card-text">{{ announcement.content|truncatewords:30 }}</p>
+            <small class="text-muted">Опубліковано: {{ announcement.created_at|date:"d.m.Y" }}</small>
+        </div>
+    </div>
+{% empty %}
+    <p>Немає активних оголошень.</p>
+{% endfor %}
+{% endblock %}
