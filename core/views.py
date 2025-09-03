@@ -60,7 +60,8 @@ class ProfileView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy('profile')
 
     def get_object(self):
-        return get_object_or_404(Profile, user=self.request.user)
+        profile, created = Profile.objects.get_or_create(user=self.request.user)
+        return profile
 
     def form_valid(self, form):
         messages.success(self.request, "Профіль оновлено!")

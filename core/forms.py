@@ -28,6 +28,8 @@ class RegistrationForm(forms.ModelForm):
         user.set_password(self.cleaned_data['password'])
         if commit:
             user.save()
+            # Створюємо профіль для нового користувача
+            Profile.objects.get_or_create(user=user)
         return user
 
 class ProfileForm(forms.ModelForm):

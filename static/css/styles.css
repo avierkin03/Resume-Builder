@@ -1,0 +1,12 @@
+body { 
+    padding-top: 70px; 
+}
+.navbar-brand { 
+    font-weight: bold; 
+}
+.messages { 
+    margin-top: 20px; 
+}
+.form-container { 
+    max-width: 800px; margin: auto; 
+}
