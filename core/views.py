@@ -7,13 +7,14 @@ from django.shortcuts import get_object_or_404, redirect
 from django.http import HttpResponse
 from django.contrib import messages
 from django.db.models import Q
-from .forms import RegistrationForm, ResumeForm, SectionFormSet
+from .forms import RegistrationForm, ResumeForm, SectionFormSet, get_section_formset
 from .models import Resume, ResumeTemplate, ResumeSection, Announcement, Profile
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from docx import Document
 import io
 from django.contrib.auth import login
+from django.template import engines
 
 
 # В'ю для домашньої сторінки
@@ -88,21 +89,22 @@ class ResumeCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
-            context['section_formset'] = SectionFormSet(self.request.POST, self.request.FILES)
+            context['section_formset'] = SectionFormSet(self.request.POST, self.request.FILES, instance=self.object)
         else:
-            context['section_formset'] = SectionFormSet()
+            context['section_formset'] = get_section_formset()
         return context
 
     def form_valid(self, form):
         form.instance.user = self.request.user
-        response = super().form_valid(form)
-        section_formset = SectionFormSet(self.request.POST, self.request.FILES, instance=form.instance)
+        self.object = form.save()
+        section_formset = SectionFormSet(self.request.POST, self.request.FILES, instance=self.object)
         if section_formset.is_valid():
             section_formset.save()
             messages.success(self.request, "Резюме створено!")
+            return super().form_valid(form)
         else:
+            messages.error(self.request, "Помилка при збереженні секцій: {}".format(section_formset.errors))
             return self.form_invalid(form)
-        return response
 
 
 # В'ю для оновлення існуючого резюме користувача
@@ -112,26 +114,33 @@ class ResumeUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'resume_form.html'
     success_url = reverse_lazy('resumes')
 
-    def get_queryset(self):
-        return Resume.objects.filter(user=self.request.user)
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
             context['section_formset'] = SectionFormSet(self.request.POST, self.request.FILES, instance=self.object)
         else:
-            context['section_formset'] = SectionFormSet(instance=self.object)
+            context['section_formset'] = get_section_formset(resume=self.object)
         return context
 
     def form_valid(self, form):
-        response = super().form_valid(form)
+        self.object = form.save()
         section_formset = SectionFormSet(self.request.POST, self.request.FILES, instance=self.object)
         if section_formset.is_valid():
+            # Перевіряємо унікальність order
+            orders = [form.cleaned_data.get('order') for form in section_formset if form.cleaned_data.get('order') is not None]
+            if len(orders) != len(set(orders)):
+                messages.error(self.request, "Порядок секцій має бути унікальним.")
+                return self.form_invalid(form)
             section_formset.save()
+            # Дебаг: виводимо order після збереження
+            print(f"Saved sections for resume {self.object.id}:")
+            for section in self.object.sections.all():
+                print(f"Section {section.section_type}: order={section.order}")
             messages.success(self.request, "Резюме оновлено!")
+            return super().form_valid(form)
         else:
+            messages.error(self.request, "Помилка при збереженні секцій: {}".format(section_formset.errors))
             return self.form_invalid(form)
-        return response
 
 
 # В'ю для видалення існуючого резюме користувача
@@ -183,6 +192,17 @@ class ResumePreviewView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         return Resume.objects.filter(user=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object.template:
+            template_engine = engines['django']
+            template = template_engine.from_string(self.object.template.html_template)
+            context['rendered_template'] = template.render({
+                'resume': self.object,
+                'sections': self.object.sections.all(),
+            })
+        return context
 
 
 # В'ю для списку шаблонів резюме

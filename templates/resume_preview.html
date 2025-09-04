@@ -6,15 +6,25 @@
     {% if resume.photo %}
         <img src="{{ resume.photo.url }}" alt="Photo" class="img-fluid mb-3" style="max-width: 150px;">
     {% endif %}
-    {% if resume.template %}
+    {% if resume.template and rendered_template %}
         <div class="resume-content">
-            {{ resume.template.html_template|safe }}
+            {{ rendered_template|safe }}
         </div>
     {% else %}
-        {% for section in resume.sections.all %}
-            <h3>{{ section.get_section_type_display }}</h3>
-            <p>{{ section.content }}</p>
+        <div class="alert alert-warning">
+            Шаблон не вибрано або некоректний. Відображаються секції за замовчуванням.
+        </div>
+        {% for section in resume.sections.all|dictsort:"order" %}
+            <div class="mb-3">
+                <h3>{{ section.get_section_type_display }}</h3>
+                <p>{{ section.content|linebreaks }}</p>
+            </div>
         {% endfor %}
+    {% endif %}
+    {% if not resume.sections.exists %}
+        <div class="alert alert-info">
+            Секції резюме відсутні. Додайте секції під час редагування.
+        </div>
     {% endif %}
     <div class="mt-3">
         <a href="{% url 'export_pdf' resume.pk %}" class="btn btn-outline-dark">Експортувати в PDF</a>

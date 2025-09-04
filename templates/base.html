@@ -47,11 +47,6 @@
                             <a class="nav-link" href="{% url 'register' %}">Реєстрація</a>
                         </li>
                     {% endif %}
-                    {% if user.groups.all.0.name == 'admins' %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'announcement_create' %}">Створити оголошення</a>
-                        </li>
-                    {% endif %}
                 </ul>
             </div>
         </div>
