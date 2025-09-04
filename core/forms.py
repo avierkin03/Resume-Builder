@@ -68,11 +68,26 @@ class ResumeSectionForm(forms.ModelForm):
             'order': 'Порядок',
         }
         widgets = {
-            'section_type': forms.HiddenInput(),  # Приховуємо поле section_type
+            'section_type': forms.HiddenInput(),
             'content': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'order': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        section_type = cleaned_data.get('section_type') or self.initial.get('section_type')
+        content = cleaned_data.get('content')
+        order = cleaned_data.get('order')
+
+        if not section_type:
+            raise forms.ValidationError("Тип секції має бути вказаний.")
+        cleaned_data['section_type'] = section_type
+        # Дозволяємо порожній content для нових форм, щоб уникнути помилки
+        if not content and self.instance.pk:
+            self.add_error('content', "Це поле є обов'язковим для існуючих секцій.")
+        if order is None:
+            self.add_error('order', "Це поле є обов'язковим.")
+        return cleaned_data
 
 # Список фіксованих типів секцій
 SECTION_TYPES = ['personal', 'experience', 'education', 'skills', 'other']
@@ -81,64 +96,50 @@ SectionFormSet = inlineformset_factory(
     Resume,
     ResumeSection,
     form=ResumeSectionForm,
-    extra=0,
-    # extra=len(SECTION_TYPES),  # 5 форм для 5 типів секцій
-    can_delete=False,  # Видалення секцій не дозволяється
+    fields=['section_type', 'content', 'order'],
+    extra=5,  # Не додаємо зайвих форм
+    can_delete=False
 )
-
 # Налаштування фіксованих типів секцій
 def get_section_formset(resume=None):
     if resume:
-        # Видаляємо зайві секції
-        resume.sections.exclude(section_type__in=SECTION_TYPES).delete()
-        # Отримуємо існуючі секції, сортовані за order
+        # Для редагування: використовуємо існуючі секції
         existing_sections = resume.sections.filter(section_type__in=SECTION_TYPES).order_by('order')
         section_types_map = {section.section_type: section for section in existing_sections}
-        # Створюємо відсутні секції
-        used_orders = [section.order for section in existing_sections if section.order is not None]
-        next_order = max(used_orders + [-1]) + 1 if used_orders else 0
-        for section_type in SECTION_TYPES:
-            if section_type not in section_types_map:
-                order = next_order if next_order < 5 else SECTION_TYPES.index(section_type)
-                ResumeSection.objects.create(
-                    resume=resume,
-                    section_type=section_type,
-                    content='',
-                    order=order
-                )
-                next_order += 1
-        # Ініціалізуємо formset із п’ятьма формами, відсортованими за order
+        # Додаємо відсутні типи секцій
+        missing_types = [t for t in SECTION_TYPES if t not in section_types_map]
+        for i, section_type in enumerate(missing_types):
+            ResumeSection.objects.create(
+                resume=resume,
+                section_type=section_type,
+                content='',
+                order=len(existing_sections) + i
+            )
+        # Оновлюємо formset після додавання секцій
         formset = SectionFormSet(
             instance=resume,
             queryset=resume.sections.filter(section_type__in=SECTION_TYPES).order_by('order')
         )
-        # Переконуємося, що є рівно 5 форм
-        if len(formset.forms) < len(SECTION_TYPES):
-            extra_forms_needed = len(SECTION_TYPES) - len(formset.forms)
-            formset.extra = extra_forms_needed
-            formset.forms.extend([formset.empty_form for _ in range(extra_forms_needed)])
-        # Ініціалізуємо section_type і order для кожної форми
+        # Ініціалізуємо форми (максимум 5)
         for i, form in enumerate(formset.forms[:len(SECTION_TYPES)]):
-            if form.instance.pk:
-                form.initial['section_type'] = form.instance.section_type
-                form.initial['order'] = form.instance.order
-            else:
+            if i < len(SECTION_TYPES):
                 form.initial['section_type'] = SECTION_TYPES[i]
                 form.initial['order'] = i
-            form.fields['section_type'].required = True
+            form.fields['section_type'].required = False
     else:
-        # Для нових резюме створюємо порожній formset із п’ятьма формами
+        # Для створення: створюємо 5 порожніх форм
         formset = SectionFormSet(instance=Resume())
-        extra_forms_needed = len(SECTION_TYPES) - len(formset.forms)
-        if extra_forms_needed > 0:
-            formset.extra = extra_forms_needed
-            formset.forms.extend([formset.empty_form for _ in range(extra_forms_needed)])
-        for i, form in enumerate(formset.forms[:len(SECTION_TYPES)]):
+        # Додаємо форми, якщо їх менше 5
+        if len(formset.forms) < len(SECTION_TYPES):
+            formset.extra = len(SECTION_TYPES) - len(formset.forms)
+            formset.forms.extend([formset.empty_form for _ in range(formset.extra)])
+        # Обрізаємо до 5 форм
+        formset.forms = formset.forms[:len(SECTION_TYPES)]
+        for i, form in enumerate(formset.forms):
             form.initial['section_type'] = SECTION_TYPES[i]
             form.initial['order'] = i
-            form.fields['section_type'].required = True
+            form.fields['section_type'].required = False
     return formset
-
 
 class AnnouncementForm(forms.ModelForm):
     class Meta:

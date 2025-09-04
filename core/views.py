@@ -11,10 +11,20 @@ from .forms import RegistrationForm, ResumeForm, SectionFormSet, get_section_for
 from .models import Resume, ResumeTemplate, ResumeSection, Announcement, Profile
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Paragraph
+from reportlab.lib.styles import ParagraphStyle
 from docx import Document
+from docx.shared import Cm
+from docx.enum.style import WD_STYLE_TYPE
+from docx.oxml.ns import qn
 import io
 from django.contrib.auth import login
 from django.template import engines
+import os
+from django.conf import settings
 
 
 # В'ю для домашньої сторінки
@@ -90,6 +100,7 @@ class ResumeCreateView(LoginRequiredMixin, CreateView):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
             context['section_formset'] = SectionFormSet(self.request.POST, self.request.FILES, instance=self.object)
+            print("POST data:", self.request.POST)  # Дебаг: виводимо дані POST
         else:
             context['section_formset'] = get_section_formset()
         return context
@@ -99,12 +110,22 @@ class ResumeCreateView(LoginRequiredMixin, CreateView):
         self.object = form.save()
         section_formset = SectionFormSet(self.request.POST, self.request.FILES, instance=self.object)
         if section_formset.is_valid():
+            print("Section formset valid. Cleaned data:")
+            for i, f in enumerate(section_formset):
+                print(f"Form {i}: {f.cleaned_data}")
             section_formset.save()
             messages.success(self.request, "Резюме створено!")
             return super().form_valid(form)
         else:
-            messages.error(self.request, "Помилка при збереженні секцій: {}".format(section_formset.errors))
+            print("Section formset errors:", section_formset.errors)
+            messages.error(self.request, f"Помилка при збереженні секцій: {section_formset.errors}")
             return self.form_invalid(form)
+
+    def form_invalid(self, form):
+        print("Form invalid. ResumeForm errors:", form.errors)
+        print("SectionFormSet errors:", self.request.POST.get('section_formset', 'No section_formset data'))
+        messages.error(self.request, f"Помилка при створенні резюме: {form.errors}")
+        return super().form_invalid(form)
 
 
 # В'ю для оновлення існуючого резюме користувача
@@ -281,17 +302,89 @@ def export_pdf(request, pk):
     resume = get_object_or_404(Resume, pk=pk, user=request.user)
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{resume.title}.pdf"'
+    
+    # Створюємо PDF
     p = canvas.Canvas(response, pagesize=A4)
-    y = 800
-    p.drawString(100, y, resume.title)
-    y -= 30
-    for section in resume.sections.all():
-        p.drawString(100, y, f"{section.get_section_type_display()}:")
-        y -= 20
-        p.drawString(120, y, section.content[:100])  # Обмеження для прикладу
-        y -= 30
+    width, height = A4  # Розміри сторінки: 595.27 x 841.89 pt
+    
+    # Налаштування шрифтів
+    font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'DejaVuSans.ttf')
+    font_bold_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'DejaVuSans-Bold.ttf')
+    try:
+        pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
+        pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', font_bold_path))
+        font_name = 'DejaVuSans'
+        font_bold_name = 'DejaVuSans-Bold'
+    except Exception as e:
+        print(f"Error loading font: {e}")
+        font_name = 'Helvetica'
+        font_bold_name = 'Helvetica-Bold'  # Резервний жирний шрифт
+    p.setFont(font_name, 12)
+    
+    # Налаштування стилю для Paragraph
+    para_style = ParagraphStyle(
+        name='Normal',
+        fontName=font_name,
+        fontSize=12,
+        leading=14,  # Міжрядковий інтервал
+        leftIndent=3 * cm,  # Відступ зліва
+        spaceAfter=0.5 * cm,  # Відступ після абзацу
+        allowWidows=1,
+        allowOrphans=1,
+    )
+    
+    # Початкові координати
+    y = height - 2 * cm  # Відступ від верху сторінки
+    
+    # Додаємо фотографію (вгорі)
     if resume.photo:
-        p.drawImage(resume.photo.path, 100, y - 100, width=100, height=100)
+        try:
+            p.drawImage(resume.photo.path, 2 * cm, y - 5 * cm, width=5 * cm, height=5 * cm, preserveAspectRatio=True)
+            y -= 6 * cm  # Зменшуємо y після фото
+        except Exception as e:
+            print(f"Error rendering image: {e}")
+            p.drawString(2 * cm, y, "Не вдалося завантажити фотографію")
+            y -= 1 * cm
+    
+    # Заголовок резюме
+    p.setFont(font_bold_name, 16)
+    p.drawString(2 * cm, y, resume.title[:100])  # Обмежуємо довжину заголовка
+    y -= 1.5 * cm
+    
+    # Секції резюме
+    for section in resume.sections.all().order_by('order'):
+        # Заголовок секції (жирний шрифт)
+        p.setFont(font_bold_name, 12)
+        section_title = f"{section.get_section_type_display()}:"
+        p.drawString(2 * cm, y, section_title)
+        # Опція підкреслення 
+        # text_width = p.stringWidth(section_title, font_bold_name, 12)
+        # p.line(2 * cm, y - 0.2 * cm, 2 * cm + text_width, y - 0.2 * cm)
+        y -= 0.3 * cm
+        # Вміст секції
+        content = section.content or ""
+        if content:
+            p.setFont(font_name, 12)
+            # Створюємо Paragraph для автоматичного перенесення
+            para = Paragraph(content.replace('\n', '<br/>'), para_style)
+            # Обчислюємо необхідну висоту
+            used_height = para.wrap(width - 4 * cm, y - 2 * cm)[1]
+            if y - used_height < 2 * cm:  # Якщо не вистачає місця, нова сторінка
+                p.showPage()
+                p.setFont(font_bold_name, 12)
+                y = height - 2 * cm
+                p.drawString(2 * cm, y, section_title)
+                # p.line(2 * cm, y - 0.2 * cm, 2 * cm + text_width, y - 0.2 * cm)  # Підкреслення на новій сторінці
+                y -= 0.8 * cm
+            # Малюємо Paragraph
+            para.drawOn(p, 2 * cm, y - used_height)
+            y -= used_height + 0.5 * cm  # Додаємо відступ після секції
+            if y < 2 * cm:  # Нова сторінка, якщо закінчився простір
+                p.showPage()
+                p.setFont(font_name, 12)
+                y = height - 2 * cm
+        y -= 1 * cm  # Додатковий відступ
+    
     p.showPage()
     p.save()
     return response
@@ -301,10 +394,32 @@ def export_pdf(request, pk):
 def export_docx(request, pk):
     resume = get_object_or_404(Resume, pk=pk, user=request.user)
     doc = Document()
-    doc.add_heading(resume.title, 0)
-    for section in resume.sections.all():
-        doc.add_heading(section.get_section_type_display(), level=1)
-        doc.add_paragraph(section.content)
+    
+    # Додаємо фотографію (вгорі)
+    if resume.photo:
+        try:
+            paragraph = doc.add_paragraph()
+            run = paragraph.add_run()
+            run.add_picture(resume.photo.path, width=Cm(5), height=Cm(5))
+            paragraph.paragraph_format.space_after = Cm(0.5)
+        except Exception as e:
+            print(f"Error adding image to DOCX: {e}")
+            doc.add_paragraph(f"Не вдалося завантажити фотографію")
+    
+    # Заголовок резюме
+    doc.add_heading(resume.title[:100], 0)
+    
+    # Секції резюме
+    for section in resume.sections.all().order_by('order'):
+        # Налаштування стилю для жирного заголовка секції
+        heading = doc.add_heading(level=1)
+        run = heading.add_run(f"{section.get_section_type_display()}:")
+        run.bold = True
+        # Опція підкреслення (закоментована, увімкни за потреби)
+        # run.underline = True
+        # Вміст секції
+        doc.add_paragraph(section.content or "")
+    
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     response['Content-Disposition'] = f'attachment; filename="{resume.title}.docx"'
     doc_buffer = io.BytesIO()

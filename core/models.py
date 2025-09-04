@@ -21,6 +21,7 @@ class ResumeTemplate(models.Model):
     description = models.TextField(blank=True, null=True)
     html_template = models.TextField()  # Зберігає HTML-шаблон для рендерингу
     created_at = models.DateTimeField(auto_now_add=True)
+    image = models.ImageField(upload_to='templates/', null=True, blank=True)
 
     def __str__(self):
         return self.name
