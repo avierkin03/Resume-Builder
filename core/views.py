@@ -98,26 +98,26 @@ class ResumeCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context['section_formset'] = SectionFormSet(self.request.POST, self.request.FILES, instance=self.object)
-            print("POST data:", self.request.POST)  # Дебаг: виводимо дані POST
-        else:
-            context['section_formset'] = get_section_formset()
+        context['section_formset'] = get_section_formset(
+            resume=None,
+            data=self.request.POST or None,
+            files=self.request.FILES or None
+        )
         return context
 
     def form_valid(self, form):
         form.instance.user = self.request.user
         self.object = form.save()
-        section_formset = SectionFormSet(self.request.POST, self.request.FILES, instance=self.object)
+        section_formset = get_section_formset(
+            resume=self.object,
+            data=self.request.POST,
+            files=self.request.FILES
+        )
         if section_formset.is_valid():
-            print("Section formset valid. Cleaned data:")
-            for i, f in enumerate(section_formset):
-                print(f"Form {i}: {f.cleaned_data}")
             section_formset.save()
             messages.success(self.request, "Резюме створено!")
             return super().form_valid(form)
         else:
-            print("Section formset errors:", section_formset.errors)
             messages.error(self.request, f"Помилка при збереженні секцій: {section_formset.errors}")
             return self.form_invalid(form)
 
@@ -137,30 +137,32 @@ class ResumeUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context['section_formset'] = SectionFormSet(self.request.POST, self.request.FILES, instance=self.object)
-        else:
-            context['section_formset'] = get_section_formset(resume=self.object)
+        context['section_formset'] = get_section_formset(
+            resume=self.object,
+            data=self.request.POST or None,
+            files=self.request.FILES or None
+        )
         return context
 
     def form_valid(self, form):
         self.object = form.save()
-        section_formset = SectionFormSet(self.request.POST, self.request.FILES, instance=self.object)
+        section_formset = get_section_formset(
+            resume=self.object,
+            data=self.request.POST,
+            files=self.request.FILES
+        )
         if section_formset.is_valid():
-            # Перевіряємо унікальність order
-            orders = [form.cleaned_data.get('order') for form in section_formset if form.cleaned_data.get('order') is not None]
+            # Перевірка унікальності порядку
+            orders = [f.cleaned_data.get('order') for f in section_formset if f.cleaned_data.get('order') is not None]
             if len(orders) != len(set(orders)):
                 messages.error(self.request, "Порядок секцій має бути унікальним.")
                 return self.form_invalid(form)
+
             section_formset.save()
-            # Дебаг: виводимо order після збереження
-            print(f"Saved sections for resume {self.object.id}:")
-            for section in self.object.sections.all():
-                print(f"Section {section.section_type}: order={section.order}")
             messages.success(self.request, "Резюме оновлено!")
             return super().form_valid(form)
         else:
-            messages.error(self.request, "Помилка при збереженні секцій: {}".format(section_formset.errors))
+            messages.error(self.request, f"Помилка при збереженні секцій: {section_formset.errors}")
             return self.form_invalid(form)
 
 

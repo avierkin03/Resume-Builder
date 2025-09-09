@@ -97,49 +97,74 @@ SectionFormSet = inlineformset_factory(
     ResumeSection,
     form=ResumeSectionForm,
     fields=['section_type', 'content', 'order'],
-    extra=5,  # Не додаємо зайвих форм
+    extra=0,  # Не додаємо зайвих форм
     can_delete=False
 )
+
+
 # Налаштування фіксованих типів секцій
-def get_section_formset(resume=None):
-    if resume:
-        # Для редагування: використовуємо існуючі секції
+def get_section_formset(resume=None, data=None, files=None):
+    """
+    Повертає formset для секцій:
+    - при resume is None  => створює тимчасовий formset з extra=len(SECTION_TYPES) та initial (для Create)
+    - при resume заданому => використовує стандартний SectionFormSet (extra=0) і працює з реально існуючими секціями
+    """
+    # створюємо initial для нової форми (точно 5 секцій)
+    if resume is None:
+        initial_data = [{'section_type': t, 'order': i} for i, t in enumerate(SECTION_TYPES)]
+
+        # тимчасовий клас formset з extra = кількість потрібних initial форм
+        TempFormSet = inlineformset_factory(
+            Resume,
+            ResumeSection,
+            form=ResumeSectionForm,
+            fields=['section_type', 'content', 'order'],
+            extra=len(initial_data),
+            can_delete=False
+        )
+
+        formset = TempFormSet(
+            data=data,
+            files=files,
+            instance=Resume(),                    # порожній parent instance (unsaved)
+            queryset=ResumeSection.objects.none(), # жодних існуючих related objects
+            initial=initial_data                  # важливо: initial для заповнення форм
+        )
+
+        # не робимо section_type обов'язковим у формі (бо воно ховається HiddenInput)
+        for form in formset.forms:
+            form.fields['section_type'].required = False
+
+    else:
+        # редагування існуючого резюме
         existing_sections = resume.sections.filter(section_type__in=SECTION_TYPES).order_by('order')
-        section_types_map = {section.section_type: section for section in existing_sections}
-        # Додаємо відсутні типи секцій
-        missing_types = [t for t in SECTION_TYPES if t not in section_types_map]
-        for i, section_type in enumerate(missing_types):
-            ResumeSection.objects.create(
-                resume=resume,
-                section_type=section_type,
-                content='',
-                order=len(existing_sections) + i
-            )
-        # Оновлюємо formset після додавання секцій
+
+        # створюємо відсутні типи секцій тільки якщо резюме вже має хоча б одну секцію
+        if existing_sections.exists():
+            section_types_map = {s.section_type: s for s in existing_sections}
+            missing_types = [t for t in SECTION_TYPES if t not in section_types_map]
+            for i, sec_type in enumerate(missing_types, start=len(existing_sections)):
+                ResumeSection.objects.create(
+                    resume=resume,
+                    section_type=sec_type,
+                    content='',
+                    order=i
+                )
+
         formset = SectionFormSet(
+            data=data,
+            files=files,
             instance=resume,
             queryset=resume.sections.filter(section_type__in=SECTION_TYPES).order_by('order')
         )
-        # Ініціалізуємо форми (максимум 5)
-        for i, form in enumerate(formset.forms[:len(SECTION_TYPES)]):
-            if i < len(SECTION_TYPES):
-                form.initial['section_type'] = SECTION_TYPES[i]
-                form.initial['order'] = i
-            form.fields['section_type'].required = False
-    else:
-        # Для створення: створюємо 5 порожніх форм
-        formset = SectionFormSet(instance=Resume())
-        # Додаємо форми, якщо їх менше 5
-        if len(formset.forms) < len(SECTION_TYPES):
-            formset.extra = len(SECTION_TYPES) - len(formset.forms)
-            formset.forms.extend([formset.empty_form for _ in range(formset.extra)])
-        # Обрізаємо до 5 форм
-        formset.forms = formset.forms[:len(SECTION_TYPES)]
+
         for i, form in enumerate(formset.forms):
-            form.initial['section_type'] = SECTION_TYPES[i]
-            form.initial['order'] = i
+            form.initial.setdefault('section_type', SECTION_TYPES[i])
+            form.initial.setdefault('order', i)
             form.fields['section_type'].required = False
+
     return formset
+
 
 class AnnouncementForm(forms.ModelForm):
     class Meta:
