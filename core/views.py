@@ -4,7 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User, Group
 from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404, redirect
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.db.models import Q
 from .forms import RegistrationForm, ResumeForm, SectionFormSet, get_section_formset
@@ -25,6 +25,7 @@ from django.contrib.auth import login
 from django.template import engines
 import os
 from django.conf import settings
+from django.core.paginator import Paginator
 
 
 # В'ю для домашньої сторінки
@@ -33,9 +34,31 @@ class HomeView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['templates'] = ResumeTemplate.objects.all()[:3]  # Популярні шаблони
+        context['templates'] = ResumeTemplate.objects.all()[:2]  # Популярні шаблони
         context['announcements'] = Announcement.objects.filter(is_active=True).order_by('-created_at')[:5]
         return context
+
+
+# AJAX-view для пагінації шаблонів
+def template_ajax(request):
+    templates = ResumeTemplate.objects.all().order_by('-created_at')  # Сортуємо за датою створення
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(templates, 2)  # 3 шаблони на сторінку
+    page_obj = paginator.get_page(page_number)
+    data = [{
+        'id': template.id,
+        'name': template.name,
+        'description': template.description,
+        'image': template.image.url if template.image else None
+    } for template in page_obj]
+    return JsonResponse({
+        'templates': data,
+        'has_previous': page_obj.has_previous(),
+        'has_next': page_obj.has_next(),
+        'previous_page': page_obj.previous_page_number() if page_obj.has_previous() else None,
+        'next_page': page_obj.next_page_number() if page_obj.has_next() else None,
+        'num_pages': paginator.num_pages,
+    })
 
 
 # В'ю для реєстрації нового користувача
@@ -103,6 +126,9 @@ class ResumeCreateView(LoginRequiredMixin, CreateView):
             data=self.request.POST or None,
             files=self.request.FILES or None
         )
+        template_id = self.request.GET.get('template_id')
+        if template_id:
+            context['form'].initial['template'] = template_id
         return context
 
     def form_valid(self, form):

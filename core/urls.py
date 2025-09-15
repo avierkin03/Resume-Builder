@@ -3,7 +3,7 @@ from .views import (
     HomeView, RegisterView, CustomLoginView, LogoutView,
     ProfileView, ResumeListView, ResumeCreateView, ResumeUpdateView,
     ResumeDeleteView, ResumeCloneView, ResumePreviewView,
-    TemplateListView, AnnouncementListView, AnnouncementCreateView,
+    TemplateListView, template_ajax, AnnouncementListView, AnnouncementCreateView,
     AnnouncementUpdateView, AnnouncementDeleteView, export_pdf, export_docx
 )
 
@@ -22,6 +22,7 @@ urlpatterns = [
     path('resume/<int:pk>/export/pdf/', export_pdf, name='export_pdf'),
     path('resume/<int:pk>/export/docx/', export_docx, name='export_docx'),
     path('templates/', TemplateListView.as_view(), name='templates'),
+    path('templates/ajax/', template_ajax, name='template_ajax'),
     path('announcements/', AnnouncementListView.as_view(), name='announcements'),
     path('announcement/create/', AnnouncementCreateView.as_view(), name='announcement_create'),
     path('announcement/<int:pk>/edit/', AnnouncementUpdateView.as_view(), name='announcement_edit'),

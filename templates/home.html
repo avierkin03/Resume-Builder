@@ -10,33 +10,15 @@
     {% endif %}
 </div>
 
-<h2 class="my-4">Популярні шаблони</h2>
-<div id="templateCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
-    <div class="carousel-inner">
-        {% for template in templates %}
-            <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ template.name }}</h5>
-                        <p class="card-text">{{ template.description|truncatewords:20 }}</p>
-                        {% if template.image %}
-                            <img src="{{ template.image.url }}" class="d-block w-30" alt="{{ template.name }}">
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        {% empty %}
-            <p>Шаблони поки недоступні.</p>
-        {% endfor %}
-    </div>
-    <button class="carousel-control-prev" type="button" data-bs-target="#templateCarousel" data-bs-slide="prev">
-        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-        <span class="visually-hidden">Попередній</span>
-    </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#templateCarousel" data-bs-slide="next">
-        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-        <span class="visually-hidden">Наступний</span>
-    </button>
+<h2>Популярні шаблони</h2>
+<div id="template-list" class="row">
+    <!-- Шаблони завантажуються сюди AJAX -->
+    <p id="loading-message">Завантаження шаблонів...</p>
+</div>
+
+<div class="pagination d-flex justify-content-center mt-3">
+    <a class="btn btn-secondary me-2" id="prev-page" href="#" disabled>Попередня</a>
+    <a class="btn btn-secondary" id="next-page" href="#">Наступна</a>
 </div>
 
 <h2 class="my-4">Останні оголошення</h2>
