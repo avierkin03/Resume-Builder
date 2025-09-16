@@ -26,6 +26,8 @@ from django.template import engines
 import os
 from django.conf import settings
 from django.core.paginator import Paginator
+from rest_framework import generics
+from .serializers import *
 
 
 # В'ю для домашньої сторінки
@@ -443,7 +445,7 @@ def export_docx(request, pk):
         heading = doc.add_heading(level=1)
         run = heading.add_run(f"{section.get_section_type_display()}:")
         run.bold = True
-        # Опція підкреслення (закоментована, увімкни за потреби)
+        # Опція підкреслення
         # run.underline = True
         # Вміст секції
         doc.add_paragraph(section.content or "")
@@ -454,3 +456,57 @@ def export_docx(request, pk):
     doc.save(doc_buffer)
     response.write(doc_buffer.getvalue())
     return response
+
+
+# --------- В'юшки для API ---------
+# визначають, як дані будуть оброблятись і повертатись у відповідь на HTTP-запити
+
+# Показ\додавання профілей
+class ProfileListAPI(generics.ListCreateAPIView):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+
+# Редагування\видалення профілей
+class ProfileDetailAPI(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+
+# Показ\додавання шаблонів резюме
+class ResumeTemplateListAPI(generics.ListCreateAPIView):
+    queryset = ResumeTemplate.objects.all()
+    serializer_class = ResumeTemplateSerializer
+
+# Редагування\видалення шаблонів резюме
+class ResumeTemplateDetailAPI(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ResumeTemplate.objects.all()
+    serializer_class = ResumeTemplateSerializer
+
+# Показ\додавання резюме
+class ResumeListAPI(generics.ListCreateAPIView):
+    queryset = Resume.objects.all()
+    serializer_class = ResumeSerializer
+
+# Редагування\видалення резюме
+class ResumeDetailAPI(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Resume.objects.all()
+    serializer_class = ResumeSerializer
+
+# Показ\додавання секції резюме
+class ResumeSectionListAPI(generics.ListCreateAPIView):
+    queryset = ResumeSection.objects.all()
+    serializer_class = ResumeSectionSerializer
+
+# Редагування\видалення секції резюме
+class ResumeSectionDetailAPI(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ResumeSection.objects.all()
+    serializer_class = ResumeSectionSerializer
+
+# Показ\додавання оголошень
+class AnnouncementListAPI(generics.ListCreateAPIView):
+    queryset = Announcement.objects.all()
+    serializer_class = AnnouncementSerializer
+
+# Редагування\видалення оголошень
+class AnnouncementDetailAPI(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Announcement.objects.all()
+    serializer_class = AnnouncementSerializer
