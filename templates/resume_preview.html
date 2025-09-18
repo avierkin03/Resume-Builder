@@ -2,10 +2,6 @@
 {% block title %}Попередній перегляд резюме{% endblock %}
 {% block content %}
 <div class="my-5">
-    <!-- <h2>{{ resume.title }}</h2>
-    {% if resume.photo %}
-        <img src="{{ resume.photo.url }}" alt="Photo" class="img-fluid mb-3" style="max-width: 150px;">
-    {% endif %} -->
     {% if resume.template and rendered_template %}
         <div class="resume-content">
             {{ rendered_template|safe }}

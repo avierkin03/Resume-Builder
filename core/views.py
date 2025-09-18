@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.db.models import Q
-from .forms import RegistrationForm, ResumeForm, SectionFormSet, get_section_formset
+from .forms import RegistrationForm, ResumeForm, get_section_formset
 from .models import Resume, ResumeTemplate, ResumeSection, Announcement, Profile
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -18,8 +18,6 @@ from reportlab.platypus import Paragraph
 from reportlab.lib.styles import ParagraphStyle
 from docx import Document
 from docx.shared import Cm
-from docx.enum.style import WD_STYLE_TYPE
-from docx.oxml.ns import qn
 import io
 from django.contrib.auth import login
 from django.template import engines

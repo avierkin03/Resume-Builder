@@ -1,2 +1,4 @@
 .env  
 env/
+core/__pycache__/
+resume_builder/__pycache__/
