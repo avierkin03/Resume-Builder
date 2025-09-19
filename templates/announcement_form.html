@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}{% if form.instance.pk %}Редагувати оголошення{% else %}Створити оголошення{% endif %}{% endblock %}
+{% block content %}
+<div class="form-container my-5">
+    <h2>{% if form.instance.pk %}Редагувати оголошення{% else %}Створити оголошення{% endif %}</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ form.title.label_tag }}
+            {{ form.title }}
+            {{ form.title.errors }}
+        </div>
+        <div class="mb-3">
+            {{ form.content.label_tag }}
+            {{ form.content }}
+            {{ form.content.errors }}
+        </div>
+        <div class="mb-3 form-check">
+            {{ form.is_active }}
+            {{ form.is_active.label_tag }}
+            {{ form.is_active.errors }}
+        </div>
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+        <a href="{% url 'announcements' %}" class="btn btn-secondary">Скасувати</a>
+    </form>
+</div>
+{% endblock %}

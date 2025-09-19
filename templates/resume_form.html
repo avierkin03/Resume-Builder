@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}{% if form.instance.pk %}Редагувати резюме{% else %}Створити резюме{% endif %}{% endblock %}
+{% block content %}
+<div class="form-container my-5">
+    <h2>{% if form.instance.pk %}Редагувати резюме{% else %}Створити нове резюме{% endif %}</h2>
+    {% if form.errors or section_formset.errors %}
+        <div class="alert alert-danger">
+            <strong>Помилка:</strong>
+            <ul>
+                {% for field, errors in form.errors.items %}
+                    <li>{{ field }}: {{ errors|join:", " }}</li>
+                {% endfor %}
+                {% for form in section_formset %}
+                    {% for field, errors in form.errors.items %}
+                        <li>Секція {{ forloop.parentloop.counter }} - {{ field }}: {{ errors|join:", " }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" id="resume-form">
+        {% csrf_token %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h4>Основна інформація</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    {{ form.title.label_tag }}
+                    {{ form.title }}
+                    {{ form.title.errors }}
+                </div>
+                <div class="mb-3">
+                    {{ form.template.label_tag }}
+                    {{ form.template }}
+                    {{ form.template.errors }}
+                </div>
+                <div class="mb-3">
+                    {{ form.photo.label_tag }}
+                    {{ form.photo }}
+                    {{ form.photo.errors }}
+                    {% if form.instance.photo %}
+                        <p class="mt-2">Поточне фото: <img src="{{ form.instance.photo.url }}" alt="Photo" class="img-thumbnail" style="max-width: 150px;"></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <h3>Секції резюме</h3>
+        <div id="management-form">
+            {{ section_formset.management_form }}
+        </div>
+        <div id="formset-container" class="mb-4">
+            {% for form in section_formset %}
+                {% with section_type=form.initial.section_type %}
+                    <div class="card mb-3 section-formset">
+                        <div class="card-header">
+                            <h5>
+                                {% if section_type == 'personal' %}Особиста інформація
+                                {% elif section_type == 'experience' %}Досвід роботи
+                                {% elif section_type == 'education' %}Освіта
+                                {% elif section_type == 'skills' %}Навички
+                                {% elif section_type == 'other' %}Інше
+                                {% endif %}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {{ form.id }}
+                            {{ form.section_type }}
+                            <div class="mb-3">
+                                {{ form.content.label_tag }}
+                                {{ form.content }}
+                                {{ form.content.errors }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.order.label_tag }}
+                                {{ form.order }}
+                                {{ form.order.errors }}
+                            </div>
+                        </div>
+                    </div>
+                {% endwith %}
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Зберегти резюме</button>
+        <a href="{% url 'resumes' %}" class="btn btn-secondary ms-2">Скасувати</a>
+    </form>
+</div>
+{% endblock %}

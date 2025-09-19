@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Профіль{% endblock %}
+{% block content %}
+<div class="form-container my-5">
+    <h2>Ваш профіль</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label">Ім'я користувача</label>
+            <input type="text" class="form-control" value="{{ user.username }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Електронна пошта</label>
+            <input type="email" class="form-control" value="{{ user.email }}" disabled>
+        </div>
+        <div class="mb-3">
+            {{ form.bio.label_tag }}
+            {{ form.bio }}
+            {{ form.bio.errors }}
+        </div>
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+    </form>
+</div>
+{% endblock %}

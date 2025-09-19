@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Оголошення{% endblock %}
+{% block content %}
+<div class="my-5">
+    <h2>Оголошення</h2>
+    {% if user.groups.all.0.name == 'admins' %}
+        <a href="{% url 'announcement_create' %}" class="btn btn-primary mb-3">Створити оголошення</a>
+    {% endif %}
+    {% for announcement in announcements %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ announcement.title }}</h5>
+                <p class="card-text">{{ announcement.content }}</p>
+                <small class="text-muted">Опубліковано: {{ announcement.created_at|date:"d.m.Y" }}</small>
+                {% if user.groups.all.0.name == 'admins' %}
+                    <div class="mt-2">
+                        <a href="{% url 'announcement_edit' announcement.pk %}" class="btn btn-outline-secondary">Редагувати</a>
+                        <a href="{% url 'announcement_delete' announcement.pk %}" class="btn btn-outline-danger">Видалити</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <p>Немає активних оголошень.</p>
+    {% endfor %}
+</div>
+{% endblock %}
