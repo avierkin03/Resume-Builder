@@ -5,7 +5,6 @@ ENV PYTHONDONTWRITEBYTECODE 1
 
 WORKDIR /app
 
-# Встановіть залежності для WeasyPrint + gcc для компіляції
 RUN apt-get update && apt-get install -y \
     gcc \
     libpango-1.0-0 \
@@ -22,8 +21,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app/
 
-# Запустіть collectstatic (тепер з залежностями)
-RUN python manage.py collectstatic --noinput
+# Виконуємо collectstatic і migrate
+RUN python manage.py collectstatic --noinput && python manage.py migrate
 
 EXPOSE 8000
 
