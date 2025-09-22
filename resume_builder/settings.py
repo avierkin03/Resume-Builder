@@ -28,8 +28,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-ipft(&lh6s41ejbzf+ad@
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', True)
 
-ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOSTS', '127.0.0.1')]
-
+#ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOSTS', '127.0.0.1')]
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1').split(',')
 
 # Application definition
 
@@ -79,17 +79,13 @@ WSGI_APPLICATION = 'resume_builder.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': config(
-        'DATABASE_URL',
-        default='sqlite:///db.sqlite3',
-        cast=parse
-    ) if os.environ.get('DATABASE_URL') else {
+    'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
+        'NAME': config('DB_NAME', default='resume_builder'),
+        'USER': config('DB_USER', default='postgres'),
+        'PASSWORD': config('DB_PASSWORD', default='postgres'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
