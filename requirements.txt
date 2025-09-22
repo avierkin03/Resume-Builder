@@ -28,3 +28,4 @@ weasyprint==66.0
 webencodings==0.5.1
 whitenoise==6.11.0
 zopfli==0.2.3.post1
+dj-database-url==2.1.0
