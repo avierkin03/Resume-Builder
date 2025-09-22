@@ -5,8 +5,15 @@ ENV PYTHONDONTWRITEBYTECODE 1
 
 WORKDIR /app
 
+# Встановіть залежності для WeasyPrint + gcc для компіляції
 RUN apt-get update && apt-get install -y \
     gcc \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /app/
@@ -15,6 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app/
 
+# Запустіть collectstatic (тепер з залежностями)
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
