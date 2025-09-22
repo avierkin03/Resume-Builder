@@ -5,6 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 
 WORKDIR /app
 
+# Встановіть залежності для WeasyPrint + gcc
 RUN apt-get update && apt-get install -y \
     gcc \
     libpango-1.0-0 \
@@ -21,9 +22,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app/
 
-# Виконуємо collectstatic і migrate
-RUN python manage.py collectstatic --noinput && python manage.py migrate
+# Виконуємо тільки collectstatic під час build
+RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-ENTRYPOINT [ "gunicorn", "resume_builder.wsgi", "-b", "0.0.0.0:8000"]
+# Виконуємо migrate перед запуском Gunicorn
+ENTRYPOINT [ "/bin/sh", "-c", "python manage.py migrate && gunicorn resume_builder.wsgi -b 0.0.0.0:8000"]
